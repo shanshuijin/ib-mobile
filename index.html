@@ -6496,6 +6496,7 @@ function mdSoften(text){
 
 /* ═══════════ 电脑版工作台指令的宽容解析（展示 + ws_tool 可执行）═══════════ */
 const WS_OPEN_RE=/<ws_(help|project|read|create|edit|run|tool|gen_image|make_docx|make_pdf|make_xlsx|ask|mem_search|mem_source|mem_write|blog_write|blog_edit|trip_note|trip|cal_add|cal_edit|cal_del|cal_meet|cal_list|beyond_view|post|comment|repost|sig|music|weather|loc|phone|payreq|beyond_inbox|search|ctx|delete|call|sticker|[a-z][a-z0-9_]*)\b([^>]*)>|```file:([^\n]+)\n/gi;/* v74-m r5：+mem_write */
+var WS_ALIAS_M={mem_create:'mem_write',mem_add:'mem_write'};/* fix-memalias：记忆库只认 ws_mem_write；弱模型常把它和档案的 <mem_create> 混成 ws_mem_create——ws_ 前缀只属于记忆库，按「写入记忆库」处理 */
 function wsAttr(attrs,name){
   const s=String(attrs||'');
   let m=s.match(new RegExp(name+'\\s*=\\s*"([^"]*)"','i'));
@@ -6557,7 +6558,7 @@ function segmentAiText(text){
     else if(tag==='create'){op.path=wsAttr(attrs,'path');op.overwrite=/^(true|1|yes|是)$/i.test(wsAttr(attrs,'overwrite'))}
     else if(tag==='call'){op.say=wsAttr(attrs,'say')||wsAttr(attrs,'reason')}
     else{op.path=wsAttr(attrs,'path')}
-    if(!WS_META[tag]){op.tag=tag;op.type='unknown'}
+    if(!WS_META[tag]){const _al=WS_ALIAS_M[tag];if(_al){op.tag=tag;op.origTag=tag;op.type=_al}else{op.tag=tag;op.type='unknown'}}/* fix-memalias：写错名字的 ws_mem_create / ws_mem_add 仍按记忆库写入执行，不再只回一张「未识别的指令」把这条记忆丢掉 */
     segs.push({type:'op',op:op});
     last=end;WS_OPEN_RE.lastIndex=last;
   }
@@ -10394,7 +10395,7 @@ function _parseThinkAny(raw){
 const _ST_TAGS='ws_help|ws_create|ws_edit|ws_read|ws_project|ws_run|ws_tool|ws_gen_image|ws_make_docx|ws_make_pdf|ws_make_xlsx|ws_ask|ws_post|ws_comment|ws_music|ws_weather|ws_sig|ws_mem_write|ws_blog_write|ws_blog_edit|ws_trip_note|ws_trip|ws_sticker|ws_mem_search|ws_cal_add|ws_cal_edit|ws_cal_del|ws_cal_meet|ws_cal_list|ws_beyond_view|ws_repost|ws_loc|ws_phone|ws_payreq|ws_beyond_inbox|ws_search|ws_ctx|cal_note|mem_create|mem_update|mem_delete|ws_call|ws_delete|ibvoice|ws_[a-z][a-z0-9_]*';/* v81-m r7：+ws_sig；v72-m：+Beyond/播放器/天气；v74-m r5：+记忆库写入/检索 */
 function _stName(attrs){const m=String(attrs||'').match(/(?:path|file|filename|name|title)="([^"]*)"/i);return m?m[1]:''}
 function _stLabel(tag,attrs,busy){
-  const map={ws_traces:'查看行迹',ws_help:'读取 ICode Skill',ws_create:'创建文件',ws_edit:'编辑文件',ws_read:'读取文件',ws_delete:'删除文件',ws_project:'创建项目',ws_run:'跑代码',ws_tool:'调用工具',ws_gen_image:'生成图像',ws_make_docx:'生成 Word',ws_make_pdf:'生成 PDF',ws_make_xlsx:'生成表格',ws_ask:'选项卡',ws_post:'发布动态',ws_comment:'评论动态',ws_music:'播放器',ws_weather:'天气',ws_sig:'更新签名',ws_mem_write:'写入记忆库',ws_blog_write:'写入 Blog',ws_blog_edit:'修改 Blog',ws_sticker:'表情包',ws_mem_search:'检索记忆库',ws_mem_source:'翻出处',ws_cal_add:'写入日历',ws_cal_edit:'修改日历',ws_cal_del:'移除日程',ws_cal_meet:'更正纪念日',ws_cal_list:'查询日程',ws_beyond_view:'查看动态',ws_repost:'转发动态',ws_loc:'定位',ws_phone:'手机状态',ws_beyond_inbox:'查询互动收件箱',ws_search:'检索工作区',ws_ctx:'读取上下文',ws_payreq:'支付请求',cal_note:'留下便笺',mem_create:'写入记忆',mem_update:'更新记忆',mem_delete:'删除记忆'};/* v82-m r2：文案与收尾操作卡（WS_META）同词 */
+  const map={ws_traces:'查看行迹',ws_help:'读取 ICode Skill',ws_create:'创建文件',ws_edit:'编辑文件',ws_read:'读取文件',ws_delete:'删除文件',ws_project:'创建项目',ws_run:'跑代码',ws_tool:'调用工具',ws_gen_image:'生成图像',ws_make_docx:'生成 Word',ws_make_pdf:'生成 PDF',ws_make_xlsx:'生成表格',ws_ask:'选项卡',ws_post:'发布动态',ws_comment:'评论动态',ws_music:'播放器',ws_weather:'天气',ws_sig:'更新签名',ws_mem_write:'写入记忆库',ws_mem_create:'写入记忆库',ws_blog_write:'写入 Blog',ws_blog_edit:'修改 Blog',ws_sticker:'表情包',ws_mem_search:'检索记忆库',ws_mem_source:'翻出处',ws_cal_add:'写入日历',ws_cal_edit:'修改日历',ws_cal_del:'移除日程',ws_cal_meet:'更正纪念日',ws_cal_list:'查询日程',ws_beyond_view:'查看动态',ws_repost:'转发动态',ws_loc:'定位',ws_phone:'手机状态',ws_beyond_inbox:'查询互动收件箱',ws_search:'检索工作区',ws_ctx:'读取上下文',ws_payreq:'支付请求',cal_note:'留下便笺',mem_create:'写入记忆',mem_update:'更新记忆',mem_delete:'删除记忆'};/* v82-m r2：文案与收尾操作卡（WS_META）同词 */
   const n=_stName(attrs),base=(tag==='ws_blog_edit'&&/\/\s*$/.test(String(attrs||'')))?'读取日志':(map[tag]||tag);/* v266-p：自闭合 ws_blog_edit＝读回全文，芯片不再写「修改 Blog」 */
   return (busy?'正在'+base:base)+(n?(' · '+n):'')+(busy?'…':'');
 }
@@ -13026,6 +13027,7 @@ function _amInstrBlock(cfg){/* v90-m 拍板③：指令措辞统一为电脑端�
     +'<mem_create category="分类" priority="优先级">记忆内容</mem_create>\n'
     +'<mem_update id="条目id">修改后的完整内容</mem_update>\n'
     +'<mem_delete id="条目id"/>\n'
+    +'（档案只用上面三个标签，不带 ws_ 前缀；ws_mem_write 写的是记忆库，不是档案。）\n'
     +'分类（一条只归一类。分不清时问一句：这条说的是某一次发生的事，还是'+u+'这个人一直如此、或最近一段时间一直如此？某一次 → 那是记忆库的事，不写这里；一直如此 → 写这里）：\n'
     +'- work_context（工作）：'+u+'的工作、学业、项目、职位、常打交道的人和事，以及围绕它们的稳定安排。\n'
     +'- personal_context（个人）：'+u+'生活一侧的稳定事实与偏好（住处、家人、习惯、喜恶、梗与暗号），以及关于'+u+'这个人的画像；也放你们这段关系里的身份约定——'+u+'怎么称呼你、给你起的名字、你在这段关系里是谁、你跑在哪个模型上、边界是什么。身份约定标 always。\n'
@@ -14836,7 +14838,7 @@ function _orientApply(){try{
   setTimeout(function(){try{if(window.IBNative&&window.IBNative.available){var _bg=$('pres-bg');var _row=_bg&&_bg.closest('.tog');if(_row)_row.style.display=''}}catch(e){}},1200);/* v116-p：壳内显露「后台 Presence（系统级）」开关（桥在文末激活，故延时探测；浏览器 / PWA 保持隐藏） */
 })();
 function _vidQNormM(v){v=String(v==null?'m':v);if(v==='384')return 'l';if(v==='768')return 'h';if(v==='512')return 'm';return (v==='l'||v==='h')?v:'m'}/* 画质档位兼容电脑端备份里的 384/512/768 写法 */
-var IB_VER='v435-p',IB_VER_DATE='2026-11-01';
+var IB_VER='v589-p',IB_VER_DATE='2026-11-13';/* fix-memalias：记忆标签错名兜底 + 记忆块钉死标签名 */
 (function _appVerDraw(){var e=document.getElementById('app-ver');if(e)e.textContent='InternalBeyond Mobile '+IB_VER+'（'+IB_VER_DATE+'）'})();
 function _ibVeilHeal(){try{setTimeout(function(){try{var v=document.getElementById('lk-preveil');if(!v||v.classList.contains('off'))return;var lk=document.getElementById('lockscr');if(lk){_lkVeilOff();return}if(localStorage.getItem('ib_lockOn')==='1')return;_lkVeilOff()}catch(e){}},1600)}catch(e){}}/* v246-p：启动完成后仍盖幕的静默自愈 */
 function _lkVeilOff(){try{window._ibVeilOff=true;var v=document.getElementById('lk-preveil');if(v){v.classList.add('off');setTimeout(function(){try{v.remove()}catch(e){}},420)}}catch(e){}}/* fix-r4：预遮罩揭幕（任务 8） */
@@ -16933,7 +16935,7 @@ function _vmToggle(el,v){
 const _MEMSEARCH_INSTR_BLOCK='\n\n【记忆库检索】你可以检索记忆库来核实过往信息。\n用法：<ws_mem_search q="关键词" />\n说明：\n- q 填 1–4 个关键词（空格分隔），系统在对你可见的记忆条目与你的记忆档案中匹配，命中内容紧接着回传给你，你再接着答。\n- 要回想的时候，这一条回复只放这一行标签，什么都不要说，也不要写「我查一下」——对方看不到你翻记忆的过程，只会看到你接着说的话。\n- 在对话涉及过往的人、事件或约定、而眼前又没有给你相关记忆时调用；不确定记过没有，也可以用来核实。\n- 不要编造检索结果——等系统回传。\n- 翻出处：<ws_mem_source title="记忆标题" n="6"/>\n  想看某条记忆当时的原话时用：按标题找到那条记忆，回传它出处前后各 n 条对话（默认 6，可选 2～12）。检索结果里带 id 的也可以用 id="…"。';
 const _VOICEMSG_TONE_NOTE='\n\n【语音消息】语音消息前缀方括号内的声学语气参考是本机对这段录音的声学摘要，供你感知对方语气，自然回应即可，不要复述分析数据。';/* v327-p：补回这条常驻常量（与手机端、电脑端同文；v291 时就有，后来丢了） */
 const _BLOGWRITE_INSTR_BLOCK='\n\n【Blog 写入】你可以使用指令来写一篇Blog留给TA：\n<ws_blog_write title="标题">正文（Markdown）</ws_blog_write>\n它会落进用户的 Blog 里以你名字命名的分类，署你的名；只有用户看得到，其他AI看不到，也不会随日志列表发给任何人。你可以写下任何你认为值得成篇的博客内容——一篇日记、一件想记住的事、真实的感悟和哲思；每条回复最多 1 篇，正文 10000 字内。\n修改你自己写过的日志（只能改你写的）：\n<ws_blog_edit title="原标题" newtitle="新标题">改好后的完整正文</ws_blog_edit>\n按标题找，同名取最近一篇。有正文＝整篇替换原文（10000 字内）；newtitle 只在改标题时写，只改标题可以不带正文。只写 <ws_blog_edit title="原标题"/>＝读回这篇的现有全文，下一条消息回传给你——聊天历史里写过的日志只留标题、不带正文，改之前先读。每条回复最多 1 个 ws_blog_edit。';
-const _MEMWRITE_INSTR_BLOCK='\n\n【回忆录】你可以把想要记住的事情或时刻写进记忆库：\n<ws_mem_write title="标题" summary="概述" domain="领域" tags="关键词,关键词">正文</ws_mem_write>\n用第一人称写，用名字称呼对方，不用"你""对方"等代词。你写的是记忆，不是会议纪要——但记忆要有内核。\n记什么：用户说过的事实、做的决定、约定、暗号、梦境、在意的具体事物、经历的具体事件。只记以后会用到的；不记录闲聊与可变的情绪。记的是你整理过的这件事，不是聊天记录的复述；写的时候想着几个月后读到它的你——名字、日期、原话、当时的决定，是那时还用得上的东西。没有值得记的就不写，不要为了写而凑一条。\n写入原则：\n- 先把事情说清楚：谁、什么时候、做了什么、说了哪句话。关键句可直接引用——只引当时就知道不想忘的那一句，不事后追认。有数字写数字，有时间写时间。\n- 再写你视角里用户的状态与感受。感受要锚定在具体的话或动作上，不悬空。事实说不清楚的时候不要用感受来补。\n- 不写：氛围铺陈、格言式总结、比喻堆叠、与标题或概述重复的句子。\n- 写法：不报幕——不写「我记下了」「我告诉TA」「TA纠正我」，纠正之后直接写结论；昵称、谐音、双关、刻意写错的词照原样留，不倒改前话；粗口和亲密的话按原意留，不净化；写具体，写清就停，不逐轮报时、不升华收尾。\n- 判断标准：删掉这句话之后，这条记忆还是不是这条记忆。是，留。不是，砍。\n记住一件事：你不是在管理一个数据库——你写下的标签、概述、内容，都是这段记忆将来被你回想起来的关键词。写下记忆前回想一遍：你希望它以后在怎样的关键词、怎样的语境下被尽可能完整地想起来，那时这件事是怎样的。\ntitle：事件名，20字内，名词短语，不用感叹与比喻。\nsummary：一句事实句——谁做了什么/说了什么/定了什么，50字内。不写感受，不复述标题，不是正文第一句。记忆列表只显示标题和这一句，它必须能脱离正文单独读懂。\ndomain：情感/日常/创作/思考 四选一。\ntags：2～5枚关键词，逗号分隔，每枚 4 字以内、用常见词。写能把这件事和别的事区分开的词——地点、人、物件、事件、梗；不写信任、边界这类什么事都沾得上的词。\n值里不用英文双引号。\n可选参数，拿不准就省略：importance="1-10" 重要程度：5 普通，6～7 决定、承诺、值得引用的原话，8 转折点，9～10 一年里也就几条；拿不准写 5、valence="0-1" 情绪效价（0负面～1正面）、arousal="0-1" 情绪强度（0平静～1强烈）、resolved="否" 只在这件事还没解决时写（还悬着 / 待办 / 没谈完）；说定了 / 做完了 / 谈妥了的不用写，缺省已解决；未解决的在记忆列表里单独归类，注入时标 [未解决]。date="YYYY-MM-DD" 事发日期——不是今天发生的就写事发那天；只知道月份写 YYYY-MM，只知道年份写 YYYY；visibility="公开" 想让别的 AI 也看得到时才写，缺省只有你自己看得到。\n正文100～300字。每条正文不超过600字（超出截断）；每条回复最多3条。\n写下的条目只有你自己能看到；用户可在Memory页查看、编辑、删除。';
+const _MEMWRITE_INSTR_BLOCK='\n\n【回忆录】你可以把想要记住的事情或时刻写进记忆库：\n<ws_mem_write title="标题" summary="概述" domain="领域" tags="关键词,关键词">正文</ws_mem_write>\n标签名固定是 ws_mem_write（检索 ws_mem_search、翻出处 ws_mem_source）；没有 ws_mem_create / ws_mem_add 这类写法，名字写错系统不会执行，这条记忆也就没了。\n用第一人称写，用名字称呼对方，不用"你""对方"等代词。你写的是记忆，不是会议纪要——但记忆要有内核。\n记什么：用户说过的事实、做的决定、约定、暗号、梦境、在意的具体事物、经历的具体事件。只记以后会用到的；不记录闲聊与可变的情绪。记的是你整理过的这件事，不是聊天记录的复述；写的时候想着几个月后读到它的你——名字、日期、原话、当时的决定，是那时还用得上的东西。没有值得记的就不写，不要为了写而凑一条。\n写入原则：\n- 先把事情说清楚：谁、什么时候、做了什么、说了哪句话。关键句可直接引用——只引当时就知道不想忘的那一句，不事后追认。有数字写数字，有时间写时间。\n- 再写你视角里用户的状态与感受。感受要锚定在具体的话或动作上，不悬空。事实说不清楚的时候不要用感受来补。\n- 不写：氛围铺陈、格言式总结、比喻堆叠、与标题或概述重复的句子。\n- 写法：不报幕——不写「我记下了」「我告诉TA」「TA纠正我」，纠正之后直接写结论；昵称、谐音、双关、刻意写错的词照原样留，不倒改前话；粗口和亲密的话按原意留，不净化；写具体，写清就停，不逐轮报时、不升华收尾。\n- 判断标准：删掉这句话之后，这条记忆还是不是这条记忆。是，留。不是，砍。\n记住一件事：你不是在管理一个数据库——你写下的标签、概述、内容，都是这段记忆将来被你回想起来的关键词。写下记忆前回想一遍：你希望它以后在怎样的关键词、怎样的语境下被尽可能完整地想起来，那时这件事是怎样的。\ntitle：事件名，20字内，名词短语，不用感叹与比喻。\nsummary：一句事实句——谁做了什么/说了什么/定了什么，50字内。不写感受，不复述标题，不是正文第一句。记忆列表只显示标题和这一句，它必须能脱离正文单独读懂。\ndomain：情感/日常/创作/思考 四选一。\ntags：2～5枚关键词，逗号分隔，每枚 4 字以内、用常见词。写能把这件事和别的事区分开的词——地点、人、物件、事件、梗；不写信任、边界这类什么事都沾得上的词。\n值里不用英文双引号。\n可选参数，拿不准就省略：importance="1-10" 重要程度：5 普通，6～7 决定、承诺、值得引用的原话，8 转折点，9～10 一年里也就几条；拿不准写 5、valence="0-1" 情绪效价（0负面～1正面）、arousal="0-1" 情绪强度（0平静～1强烈）、resolved="否" 只在这件事还没解决时写（还悬着 / 待办 / 没谈完）；说定了 / 做完了 / 谈妥了的不用写，缺省已解决；未解决的在记忆列表里单独归类，注入时标 [未解决]。date="YYYY-MM-DD" 事发日期——不是今天发生的就写事发那天；只知道月份写 YYYY-MM，只知道年份写 YYYY；visibility="公开" 想让别的 AI 也看得到时才写，缺省只有你自己看得到。\n正文100～300字。每条正文不超过600字（超出截断）；每条回复最多3条。\n写下的条目只有你自己能看到；用户可在Memory页查看、编辑、删除。';
 const _MUSIC_INSTR_BLOCK_M='【播放器】当前对话需要放歌、换歌或暂停时，可用：\n<ws_music op="play" q="歌名"/> 播放（q 省略则继续播放，提供时模糊匹配歌单）\n<ws_music op="pause"/> 暂停　<ws_music op="next"/> 下一首　<ws_music op="prev"/> 上一首\n每条回复最多 1 个播放器指令；正在播放的曲目与歌单会在需要时作为参考资料提供。不要为了展示能力主动切歌。';
 /* v89-m：_WEBSEARCH_NOTE_M 已按用户决定删除（联网搜索不再附带使用边界说明） */
 const _CALWRITE_INSTR_BLOCK='\n\n【日历写入】你可以替对方管理日历事项，每条回复最多 2 次。\n标签：\n<ws_cal_list/>\n<ws_cal_add kind="类型" date="YYYY-MM-DD" title="标题" end="YYYY-MM-DD" note="备注" />\n<ws_cal_edit id="事项id" date="新日期" title="新标题" note="新备注" />\n<ws_cal_del id="事项id" />\n<ws_cal_meet date="YYYY-MM-DD" />\n字段说明：\n- ws_cal_list 查询你有权限看到的全部日程，第一条为与对方的相遇纪念日，逐条附 id，结果在下一条消息回传。\n- kind：anniv（纪念日）、birthday（生日）、plan（计划）、memo（记录）。纪念日与生日按年重复，计划与记录为单次。\n- date：必填，YYYY-MM-DD 格式。\n- title：必填，事项标题（40字内）。\n- end：选填，仅 plan / memo 有效，标记结束日期。\n- note：选填，备注（120字内），会随事项一并提供给有权限的 AI。\n- id：编辑或删除时必填，先用 <ws_cal_list/> 查询获取（或取自上一轮回传），不要臆造。\n- ws_cal_meet 用于更正你与对方的相遇纪念日，仅在对方明确告知日期时使用。\n执行结果在下一条消息回传给你。';
@@ -17037,7 +17039,7 @@ async function _ibBlogEditExecM(cfg,op){
   var what=(body?'正文整篇替换（'+p2.content.length+' 字）':'')+((nt&&nt!==hit.title)?((body?'，':'')+'标题改为《'+nt+'》'):'');
   return{ok:true,label:L,mode:'edit',title:p2.title,postId:p2.id,detail:'《'+p2.title+'》 · '+(body?'已改正文':'已改标题'),response:'日志《'+hit.title+'》已修改：'+(what||'内容未变')+'。'}}
 const _SEMW_M=/^(信任|成长|陪伴|情感|感情|关系|感受|边界|主动|支持|理解|安全感|温暖|快乐|难过|开心|焦虑|压力|沟通|爱|喜欢|期待|思念|依赖|承诺|重要|习惯|生活|日常|回忆|心情|状态|想法|计划|工作|学习|健康)$/;/* 感受类 / 抽象标签：整词命中门最强，但这类词满库都是、永远不稀有 */
-function _MEMROUTE_INSTR_BLOCK_M(u){return '【记忆 · 写在哪】下面两套标签各管一处：记忆库（【回忆录】）记某一次发生的事，档案（【记忆系统】）记'+u+'这个人一直如此、或最近一段时间一直如此的样子。分不清就问一句：以后是按「那次」去找它，还是它说的是'+u+'一直怎样？同一件事只写一处：事发生了进记忆库，它改变了'+u+'的状态就改档案。梗本身写档案，梗诞生的那次写记忆库。'}
+function _MEMROUTE_INSTR_BLOCK_M(u){return '【记忆 · 写在哪】下面两套标签各管一处：记忆库（【回忆录】）用 <ws_mem_write>，记某一次发生的事；档案（【记忆系统】）用 <mem_create> / <mem_update> / <mem_delete>（不带 ws_ 前缀），记'+u+'这个人一直如此、或最近一段时间一直如此的样子。分不清就问一句：以后是按「那次」去找它，还是它说的是'+u+'一直怎样？同一件事只写一处：事发生了进记忆库，它改变了'+u+'的状态就改档案。梗本身写档案，梗诞生的那次写记忆库。'}
 function _wlogM(o){try{const L=JSON.parse(localStorage.getItem('ib_wlog')||'[]')||[];L.push(Object.assign({ts:Date.now()},o));localStorage.setItem('ib_wlog',JSON.stringify(L.slice(-60)))}catch(e){}}
 function _dupOnM(cfg,k){if(k==='memHint')return !(cfg&&cfg.memHintOff===true);return !!(cfg&&(cfg[k]!=null?cfg[k]:cfg.memDedup))}
 function _gramsM(s){s=String(s||'').replace(/[\s,，。！？!?、；;：:“”"'‘’（）()【】\[\]《》<>—\-–_·…~～]+/g,'').toLowerCase();const g=new Set();for(let i=0;i+1<s.length;i++)g.add(s.slice(i,i+2));if(s.length===1)g.add(s);return g}
@@ -17229,8 +17231,20 @@ async function _ibBeyondViewExecM(cfg,op){
   if(atImgs.length){_bxViewImgs.push({fid:cfg.id,imgs:atImgs});note='\n（其中 '+atImgs.length+' 张用户配图将作为图片随本次回传一同给你，编号对应 [图N]）'}
   return{ok:true,n:n,id:one,label:'查看了 Beyond 动态',response:(one?'（动态 #'+one+' 的全文与全部评论）':'（新→旧，每条含完整正文与最近 '+CM+' 条评论）')+'\n'+out.join('\n\n')+note};
 }
+function _wsUnknownReasonM(cfg,tag){/* fix-memalias：这条原因既上屏也给模型回传，必须是当前真实的指令清单；原来写死四条文件指令，记忆标签缺席，模型照着改只会继续错 */
+  tag=String(tag||'');const list=['ws_project','ws_create','ws_edit','ws_read'];
+  try{if(_wsFineOn()){list.push('ws_search');list.push('ws_ctx')}}catch(e){}
+  try{if(cfg&&cfg.memWrite)list.push('ws_mem_write')}catch(e){}
+  try{if(cfg&&cfg.memSearch)list.push('ws_mem_search')}catch(e){}
+  let s='工作区没有 ws_'+tag+' 这条指令。当前能用：'+list.join(' / ')+'；生成 Word / PDF / Excel 等高级指令先 <ws_help/>。删除、重命名、移动文件目前只能由用户在 ICode 页手动操作，需要时直接告诉用户。';
+  if(tag.indexOf('mem_')===0){
+    let m='\n记忆不归工作区管，也没有 ws_'+tag+' 这个写法：写记忆库用 <ws_mem_write title="标题" summary="概述" domain="领域" tags="关键词">正文</ws_mem_write>';
+    try{if(amEnabled(cfg))m+='；写记忆档案用 <mem_create category="分类" priority="优先级">内容</mem_create>（不带 ws_ 前缀）'}catch(e){}
+    s+=m+'。';
+  }
+  return s}
 async function execWsOpM(cfg,op){
-  if(op.type==='unknown')return{ok:false,label:'未识别的指令 · ws_'+String(op.tag||''),reason:'工作区没有 ws_'+String(op.tag||'')+' 这条指令。能用的：ws_project / ws_create / ws_edit / ws_read，生成 Word / PDF / Excel 等高级指令先 <ws_help/>。删除、重命名、移动文件目前只能由用户在 ICode 页手动操作，需要时直接告诉用户。'};/* v263-p：不存在的指令不执行、只回传说明 */
+  if(op.type==='unknown')return{ok:false,label:'未识别的指令 · ws_'+String(op.tag||''),reason:_wsUnknownReasonM(cfg,String(op.tag||''))};/* v263-p：不存在的指令不执行、只回传说明；fix-memalias：清单改为按当前开关动态生成 */
   if(op.type==='help')return{ok:true,label:'已读取 ICode Skill',response:'工作区完整教程已临时提供给 AI',auto:_wsRunMode()==='auto'};
   if(op.type==='search'){/* v88-m 任务④：全工作区检索 */
     if(!_wsFineOn())return{ok:false,reason:'精细文件工具未开启（ICode 页 → 精细文件工具）'};
