@@ -14838,7 +14838,7 @@ function _orientApply(){try{
   setTimeout(function(){try{if(window.IBNative&&window.IBNative.available){var _bg=$('pres-bg');var _row=_bg&&_bg.closest('.tog');if(_row)_row.style.display=''}}catch(e){}},1200);/* v116-p：壳内显露「后台 Presence（系统级）」开关（桥在文末激活，故延时探测；浏览器 / PWA 保持隐藏） */
 })();
 function _vidQNormM(v){v=String(v==null?'m':v);if(v==='384')return 'l';if(v==='768')return 'h';if(v==='512')return 'm';return (v==='l'||v==='h')?v:'m'}/* 画质档位兼容电脑端备份里的 384/512/768 写法 */
-var IB_VER='v589-p',IB_VER_DATE='2026-11-13';/* fix-memalias：记忆标签错名兜底 + 记忆块钉死标签名 */
+var IB_VER='v590-p',IB_VER_DATE='2026-11-17';/* fix-memalias：记忆标签错名兜底 + 记忆块钉死标签名；v590-p：标签在你话里点名即过门，不再要求该标签稀有 */
 (function _appVerDraw(){var e=document.getElementById('app-ver');if(e)e.textContent='InternalBeyond Mobile '+IB_VER+'（'+IB_VER_DATE+'）'})();
 function _ibVeilHeal(){try{setTimeout(function(){try{var v=document.getElementById('lk-preveil');if(!v||v.classList.contains('off'))return;var lk=document.getElementById('lockscr');if(lk){_lkVeilOff();return}if(localStorage.getItem('ib_lockOn')==='1')return;_lkVeilOff()}catch(e){}},1600)}catch(e){}}/* v246-p：启动完成后仍盖幕的静默自愈 */
 function _lkVeilOff(){try{window._ibVeilOff=true;var v=document.getElementById('lk-preveil');if(v){v.classList.add('off');setTimeout(function(){try{v.remove()}catch(e){}},420)}}catch(e){}}/* fix-r4：预遮罩揭幕（任务 8） */
@@ -22254,7 +22254,7 @@ function parseWindow(q,now){
   return null}
 function semw(t){try{return typeof _SEMW_M!=='undefined'&&_SEMW_M.test(t)}catch(e){return false}}/* v317-p：泛词表与写入回执同一张（主脚本 _SEMW_M） */
 function gate(doc,qt,qraw,idx,relax,p4){/* 返回过门理由；空串＝门外。p4：泛词标签不单独开门（照常算字面分；意思相关的仍凭向量或稀有词进门） */
-  for(var i=0;i<doc.tags.length;i++){var t=doc.tags[i];if(qraw.indexOf(t)!==-1&&tagRare(idx.tagDf[t]||1,idx.N)){if(p4&&semw(t))continue;return '标签「'+t+'」'}}
+  for(var i=0;i<doc.tags.length;i++){var t=doc.tags[i];if(qraw.indexOf(t)===-1||semw(t)||STOPGATE[t])continue;return '标签「'+t+'」'}/* v590-p：与 gate5 同口径 */
   var r1=0,rb=0,vb=0;
   for(var j=0;j<qt.length;j++){var w=qt[j],df=idx.df[w]||0;if(!df||STOPGATE[w]||(w.length<=2&&FUNC_CH.test(w)))continue;
     if(doc.tf[1][w]&&rare(df,idx.N))r1++;
@@ -22276,9 +22276,7 @@ function gate5(doc,Q,qraw,idx,tv,relax,forced,win){
   var i,k,t;
   if(forced){var ttl=String(doc.m.title||'').toLowerCase().trim();if(ttl.length>=4&&qraw.indexOf(ttl)!==-1)return '标题「'+ttl+'」'}
   for(i=0;i<doc.tags.length;i++){t=doc.tags[i];if(qraw.indexOf(t)===-1||semw(t)||STOPGATE[t])continue;
-    if(forced)return '标签「'+t+'」';
-    if(tagRare(tv[t]||1,idx.N))return '标签「'+t+'」';
-    if(win){var ev=doc.m.eventTime>0?doc.m.eventTime:(doc.m.created||0);if(ev>=win[0]&&ev<=win[1])return '标签「'+t+'」'}}
+    return '标签「'+t+'」'}/* v590-p：标签在你原话里点名就算证据（泛词与停用词仍挡）；原先还要求这条标签在本库稀有（df≤3），结果越是常聊的主题越想起不来，与「聊得越多印象越深」相反 */
   for(k=0;k<Q.al.length;k++){var a=Q.al[k],da=idx.df[a]||0;if(da&&rare(da,idx.N)&&(doc.tf[1][a]||doc.tf[2][a]))return '稀有词「'+a+'」'}
   var hits=[];
   for(k=0;k<Q.big.length;k++){var b=Q.big[k],df=idx.df[b.w]||0;if(!df||!rare(df,idx.N)||!(doc.tf[1][b.w]||doc.tf[2][b.w]))continue;
