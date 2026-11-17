@@ -9113,6 +9113,17 @@ function msgActions(m,el){
 function _fmtFull(ts){const d=new Date(ts);return d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+':'+String(d.getSeconds()).padStart(2,'0')}
 function _cacheHitPctM(u){
   try{if(!u)return null;var i=Math.max(0,+u.i||0),cr=Math.max(0,+u.cr||0),cw=Math.max(0,+u.cw||0),t=i+cr+cw;if(!(t>0))return null;return Math.round(cr/t*100)}catch(e){return null}}
+function _cacheFpM(sys,hist){/* v591-p：给这一轮真正发出去的前缀做指纹（system 一段 + 每条消息一段），下一轮用来定位缓存断点 */
+  function H(s){var h=5381;s=String(s||'');for(var i=0;i<s.length;i++)h=((h*33)^s.charCodeAt(i))>>>0;return h.toString(36)}
+  var m=[];(hist||[]).forEach(function(x){m.push(H(String((x&&x.role)||'')+'\u0001'+String((x&&x.content)||'')))});
+  return{s:H(sys),m:m}}
+function _cacheDiagM(prev,cur,now){/* 与上一轮比：system 变／第几条历史变／一字未变 */
+  if(!prev||!prev.m||!cur)return{fresh:1,ago:0,sysDiff:0,histDiff:-1};
+  var ago=Math.max(0,now-(prev.at||0));
+  if(prev.s!==cur.s)return{fresh:0,ago:ago,sysDiff:1,histDiff:-1};
+  var n=Math.min(prev.m.length,cur.m.length),i;
+  for(i=0;i<n;i++){if(prev.m[i]!==cur.m[i])return{fresh:0,ago:ago,sysDiff:0,histDiff:i}}
+  return{fresh:0,ago:ago,sysDiff:0,histDiff:-1}}
 function openMsgInfo(m,el){
   const b=$('mi-body');if(!b){_msgActionsLegacy(m,el);return}
   const av=_msgAva(m);
@@ -9124,7 +9135,14 @@ function openMsgInfo(m,el){
   if(Array.isArray(m.files)&&m.files.length)rows.push(['附件',m.files.length+' 个']);
   if(m.voice)rows.push(['语音',Math.max(1,Math.round(m.voice.duration||1))+' 秒']);
   if(m.usage&&(m.usage.i||m.usage.o||m.usage.cr||m.usage.cw))rows.push(['Token',(m.usage.i||0)+' 入 / '+(m.usage.o||0)+' 出'+((m.usage.cr)?(' · 缓存读 '+m.usage.cr):'')+((m.usage.cw)?(' · 缓存写 '+m.usage.cw):'')]);
-  try{const _chp=(m.role!=='user')?_cacheHitPctM(m.usage):null;if(_chp!=null)rows.push(['缓存命中率',_chp+'%'])}catch(e){}/* v331-p：这一轮输入里有多少是按缓存价读的 */
+  try{const _chp=(m.role!=='user')?_cacheHitPctM(m.usage):null;if(_chp!=null)rows.push(['缓存命中率',_chp+'%'])}catch(e){}
+  try{const cd=(m.role!=='user')?m.cacheDiag:null;if(cd){const _ag=(cd.ago>=3600000)?(Math.round(cd.ago/3600000)+' 小时前'):(cd.ago>=60000?(Math.round(cd.ago/60000)+' 分钟前'):'刚刚');let _t;
+    if(cd.fresh)_t='没有可比对的上一条（换端点/换模型/新会话后的第一条必为 0）';
+    else if(cd.sysDiff)_t='前缀在「人设与功能说明」就已不同（上一条 '+_ag+'）';
+    else if(cd.histDiff>=0)_t='前缀从「历史第 '+(cd.histDiff+1)+' 条」起不同（上一条 '+_ag+'）';
+    else _t='前缀与上一条完全一致（上一条 '+_ag+'）——服务端仍未命中，问题在端点或模型有没有开隐式缓存';
+    rows.push(['缓存断点',_t+(cd.ep?('　端点 '+cd.ep):'')])}}catch(e){}
+  /* v331-p：这一轮输入里有多少是按缓存价读的 */
   try{if(m.role!=='user'&&m.memHit&&typeof m.memHit==='object'){const _h=m.memHit,_n=(Array.isArray(_h.it)?_h.it.filter(function(x){return x&&x.id}).length:0);if(!_n){rows.push(['记忆',(_h.err?('管线出错：'+String(_h.err).slice(0,60)):(_h.route?('像'+_h.route+'，没翻记忆库'):(_h.skip?'寒暄，没翻记忆库':'这一轮没有想起记忆')))+((_h.deg&&!_h.err)?('（向量检索没连上'+(_h.degw?'：'+_h.degw:'')+'，用的关键词）'):'')]);const _nr=Array.isArray(_h.near)?_h.near.filter(function(x){return x&&x.id}):[];if(_nr.length)rows.push(['差一点',_nr.map(function(x){return String(x.t||'（无标题）')+'（'+String(x.r||'')+'）'}).join('；')])}else if(_h.err||_h.deg)rows.push(['记忆','想起 '+_n+' 条'+(_h.err?('；管线出错：'+String(_h.err).slice(0,60)):('；向量检索没连上'+(_h.degw?('（'+String(_h.degw)+'）'):'')+'，这一轮用的关键词'))])}}catch(e){}/* v318-p：这一轮没想起时，原因与差一点收在长按面板里；v318-p：想起了也写红点的原因 */
   if(m.proactive)rows.push(['来源','主动消息']);
   b.innerHTML='<div class="mi-head"><div class="mh-ava mi-ava" id="mi-ava"></div><div class="mi-who"><div class="mi-nm">'+esc(av.name||'')+'</div><div class="mi-rl">'+(m.role==='user'?'你发出的消息':'AI 的回复')+'</div></div></div>'
@@ -11186,6 +11204,15 @@ async function genReply(cfg,internalCtx){
         if(_fi>=0){_uPart=_c0.slice(0,_fi);_fbPart=_c0.slice(_fi+2)}
         hist[i].content=_IB_TAIL_HEAD+(_fbPart?_fbPart+'\n\n':'')+tails.join('\n\n')+_IB_TAIL_USER+_uPart;try{const _ia9=window._ibImgMemM&&window._ibImgMemM.take(cfg);if(_ia9&&_ia9.dataUrl){hist[i].images=(Array.isArray(hist[i].images)?hist[i].images:[]).concat([_ia9.dataUrl]);const _hid9=hist[i].id;const _um9=_hid9?(((typeof _msgs!=='undefined'&&Array.isArray(_msgs))?_msgs.find(function(x){return x&&x.id===_hid9}):null)||(myMsgs||[]).find(function(x){return x&&x.id===_hid9})):null;if(_um9){_um9.memImgs=(Array.isArray(_um9.memImgs)?_um9.memImgs:[]).concat([{dataUrl:_ia9.dataUrl,mime:'image/jpeg',g:_ia9.g||'',j:1}]);dbPut('chatMessages',_um9).catch(function(){})}}}catch(e){}/* v397-p：「带图」时想起的那张像你发的图一样留在这条消息上（m.memImgs），随历史走，缓存不掉 */break}}
     }
+    let _cd9=null;
+    try{/* v591-p：缓存断点诊断——先记下这一轮真发出去的前缀，再和上一轮比 */
+      const _fp=_cacheFpM(sys,hist),_k='ib_cfp_'+String((cfg&&cfg.id)||'')+'|'+String(myThread?myThread.id:'');
+      let _pv=null;try{_pv=JSON.parse(localStorage.getItem(_k)||'null')}catch(e){}
+      _cd9=_cacheDiagM(_pv,_fp,Date.now());
+      try{_cd9.ep=String(new URL(String((cfg&&cfg.endpoint)||'')).host||'')}catch(e){_cd9.ep=String((cfg&&cfg.endpoint)||'').slice(0,40)}
+      _cd9.model=String((cfg&&cfg.model)||'');
+      try{localStorage.setItem(_k,JSON.stringify({s:_fp.s,m:_fp.m.slice(-120),at:Date.now()}))}catch(e){}
+    }catch(e){_cd9=null}
     if(!hist.length)throw new Error('没有可发送的上下文');
     var _ctxSnap=null;try{_ctxSnap=_ctxT.snapshot({who:cfgName(cfg),path:'dm',cfgId:(cfg&&cfg.id)||'',threadId:myThread?String(myThread.id||''):'',quiet:_quietM})}catch(e){}
     const r=await callAIC(cfg,hist,sys,onDelta,myAc.signal,Object.assign({},pa,{_srchLog:_srchLog,_onSrch:_onSrch}));/* v61-m t9：接入自动续写 */
@@ -11193,7 +11220,7 @@ async function genReply(cfg,internalCtx){
     try{if(_ctxSnap&&_ru){_ctxSnap.total=Number(_ru.i)||0;_ctxSnap.cr=Number(_ru.cr)||0;_ctxSnap.cw=Number(_ru.cw)||0}}catch(e){}/* v353-p：轮头「总」用服务商的数（usage.i + cr + cw） */
     if(!accT.trim())throw new Error((accK&&accK.trim())?'正文为空：思考内容占满了本次输出上限（可到 API → 全局设置 → 输出与续写 调大「单次输出上限」，或关掉该 AI 的「启用思路笔记」）':'返回为空');/* v130-p：把「返回为空」说清楚 */
     if(_fedH){try{_fedH.commit().catch(function(){})}catch(e9){}_fedH=null}_gqTaken=null;_pgTaken=null;
-    const _am0=await saveAi(cfg,accT,accK,aiEl,{myThread,myMsgs,sameConv,usage:_ru,truncated:_finTruncM(r.fin),memHit:_memHit9,srch:_srchLog,ctxSnap:_ctxSnap});try{const _mq9=window._ibImgMemM&&window._ibImgMemM.pics(cfg);if(_mq9&&_am0&&_am0.id){_am0.memPics=_mq9;await dbPut('chatMessages',_am0);try{redrawMsg(_am0)}catch(e){}}}catch(e){}/* v397-p：这一轮想起的照片记在这条回复上（只有指向） */try{if(_memCommit9)_memCommit9()}catch(e){}/* v317-p：回复落库成功，冷却与轮数此刻才落 */
+    const _am0=await saveAi(cfg,accT,accK,aiEl,{myThread,myMsgs,sameConv,usage:_ru,truncated:_finTruncM(r.fin),memHit:_memHit9,srch:_srchLog,ctxSnap:_ctxSnap});try{if(_am0&&_cd9){_am0.cacheDiag=_cd9;await dbPut('chatMessages',_am0)}}catch(e){}/* v591-p：缓存断点随这条回复存下来，面板里直接看 */try{const _mq9=window._ibImgMemM&&window._ibImgMemM.pics(cfg);if(_mq9&&_am0&&_am0.id){_am0.memPics=_mq9;await dbPut('chatMessages',_am0);try{redrawMsg(_am0)}catch(e){}}}catch(e){}/* v397-p：这一轮想起的照片记在这条回复上（只有指向） */try{if(_memCommit9)_memCommit9()}catch(e){}/* v317-p：回复落库成功，冷却与轮数此刻才落 */
     try{await _mToolLoop(cfg,pa,sys,hist,accT,_am0,{myThread,myMsgs,sameConv,signal:myAc.signal})}catch(e){}/* v84-m r1：工具/数据类指令在同一轮内多次调用（任务 1） */
   }catch(err){
     try{if(_fedH){_fedH.restore();_fedH=null}}catch(e9){}try{if(_gqTaken&&_gqTaken.length){_gwFeedQ=_gqTaken.concat(_gwFeedQ);_gqTaken=null}}catch(e9){}try{if(_pgTaken&&!_presGap){_presGap=_pgTaken;_pgTaken=null}}catch(e9){}/* fix-m①：请求未送达→动态配图/调取结果/离开时长放回队首；文本结果因未标 fed 下次自动重传 */
@@ -14838,7 +14865,7 @@ function _orientApply(){try{
   setTimeout(function(){try{if(window.IBNative&&window.IBNative.available){var _bg=$('pres-bg');var _row=_bg&&_bg.closest('.tog');if(_row)_row.style.display=''}}catch(e){}},1200);/* v116-p：壳内显露「后台 Presence（系统级）」开关（桥在文末激活，故延时探测；浏览器 / PWA 保持隐藏） */
 })();
 function _vidQNormM(v){v=String(v==null?'m':v);if(v==='384')return 'l';if(v==='768')return 'h';if(v==='512')return 'm';return (v==='l'||v==='h')?v:'m'}/* 画质档位兼容电脑端备份里的 384/512/768 写法 */
-var IB_VER='v590-p',IB_VER_DATE='2026-11-17';/* fix-memalias：记忆标签错名兜底 + 记忆块钉死标签名；v590-p：标签在你话里点名即过门，不再要求该标签稀有 */
+var IB_VER='v591-p',IB_VER_DATE='2026-11-17';/* fix-memalias：记忆标签错名兜底 + 记忆块钉死标签名；v590-p：标签在你话里点名即过门；v591-p：消息面板显示缓存断点 */
 (function _appVerDraw(){var e=document.getElementById('app-ver');if(e)e.textContent='InternalBeyond Mobile '+IB_VER+'（'+IB_VER_DATE+'）'})();
 function _ibVeilHeal(){try{setTimeout(function(){try{var v=document.getElementById('lk-preveil');if(!v||v.classList.contains('off'))return;var lk=document.getElementById('lockscr');if(lk){_lkVeilOff();return}if(localStorage.getItem('ib_lockOn')==='1')return;_lkVeilOff()}catch(e){}},1600)}catch(e){}}/* v246-p：启动完成后仍盖幕的静默自愈 */
 function _lkVeilOff(){try{window._ibVeilOff=true;var v=document.getElementById('lk-preveil');if(v){v.classList.add('off');setTimeout(function(){try{v.remove()}catch(e){}},420)}}catch(e){}}/* fix-r4：预遮罩揭幕（任务 8） */
